@@ -2,13 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install dependencies
+# Install modern Gemini SDK
 RUN pip install --no-cache-dir google-genai
 
-# Copy script
 COPY monitor.py .
 
-# Create log directory to be mounted
-RUN mkdir -p /var/log && touch /var/log/server.log
+# Ensure the log directory exists
+RUN mkdir -p /var/log
 
 CMD ["python", "monitor.py"]

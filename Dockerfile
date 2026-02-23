@@ -3,7 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-RUN pip install --no-cache-dir google-generativeai
+RUN pip install --no-cache-dir google-genai
 
 # Copy script
 COPY monitor.py .

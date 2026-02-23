@@ -3,7 +3,7 @@ import time
 import json
 import smtplib
 from email.message import EmailMessage
-import google.generativeai as genai
+from google import genai
 
 # Configuration from Environment Variables
 LOG_FILE = "/var/log/server.log"
@@ -14,9 +14,10 @@ EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
 SMTP_SERVER = "smtp.gmail.com"  # Example for Gmail
 ERROR_CODES = ["401", "500"]
 
-# Initialize Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Initialize the new Client
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # Simple Cache for Duplicate Errors
 cache_file = "error_cache.json"
@@ -46,7 +47,10 @@ def process_log_line(line):
         else:
             print("New error found. Consulting Gemini...")
             prompt = f"Troubleshoot this server log error and provide a fix: {line}"
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+            model="gemini-2.0-flash", 
+            contents=f"Troubleshoot this server error: {line}"
+            )
             solution = response.text
             
             # Cache and Notify

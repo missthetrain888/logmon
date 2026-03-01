@@ -18,12 +18,14 @@ SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", "5")) # Default 5 seconds
 
 # REGEX TRIGGER
 ERROR_PATTERNS = [
-    r"HTTP/1\.\d\s5\d{2}",
-    r"\b(FATAL|CRITICAL|PANIC|ERROR)\b",
-    r"OUT\sOF\sMEMORY",
-    r"CONNECTION\s(REFUSED|TIMEOUT)",
-    r"EXCEPTION:\s\w+"
+    r"\b(FATAL|CRITICAL|PANIC|ERROR|FAIL|FAILED)\b", # Broad severity
+    r"HTTP/1\.\d\s[45]\d{2}",                       # Catch 4xx and 5xx
+    r"(NO\sSPACE|DISK\sFULL|I/O\sERROR)",           # Storage issues
+    r"OUT\sOF\sMEMORY|OOM\-KILLER",                 # RAM issues
+    r"CONNECTION\s(REFUSED|TIMEOUT|RESET|LOST)",    # Network issues
+    r"EXCEPTION:\s\w+|STACK\sTRACE"                 # Application crashes
 ]
+
 TRIGGER_RE = re.compile("|".join(ERROR_PATTERNS), re.IGNORECASE)
 IGNORE_KEYWORDS = ["favicon.ico", "Googlebot", "health-check", "status check success"]
 
@@ -132,6 +134,7 @@ def monitor_logs():
                     f.seek(last_pos)
                     for line in f:
                         clean = line.strip()
+                        print(f"DEBUG: Processing line: {clean}")
                         if not clean or any(n.upper() in clean.upper() for n in IGNORE_KEYWORDS):
                             continue
                         if TRIGGER_RE.search(clean):

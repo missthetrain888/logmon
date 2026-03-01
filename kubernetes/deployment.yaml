@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-troubleshooter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-monitor
+  template:
+    metadata:
+      labels:
+        app: log-monitor
+    spec:
+      containers:
+      - name: monitor
+        # Update project name below to match your OCP namespace
+        image: image-registry.openshift-image-registry.svc:5000/my-project/log-monitor:latest
+        imagePullPolicy: Always
+        env:
+        - name: SCAN_INTERVAL
+          value: "5"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: LOG_DIR
+          value: "/var/log"
+        - name: STATE_FILE
+          value: "/app/log_state.json"
+        - name: CACHE_FILE
+          value: "/app/error_cache.json"
+        envFrom:
+        - secretRef:
+            name: log-monitor-secrets
+        volumeMounts:
+        - name: log-source
+          mountPath: /var/log
+          readOnly: true
+        - name: app-persistence
+          mountPath: /app
+      volumes:
+      - name: log-source
+        persistentVolumeClaim:
+          claimName: log-monitor-pvc # Maps to your EFS
+      - name: app-persistence
+        persistentVolumeClaim:
+          claimName: log-monitor-pvc # Uses EFS to store state/cache

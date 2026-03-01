@@ -1,0 +1,16 @@
+services:
+  log-monitor:
+    build: .
+    container_name: log_troubleshooter
+    restart: always
+    environment:
+      - EMAIL_SENDER=${EMAIL_SENDER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_RECEIVER=${EMAIL_RECEIVER}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - SCAN_INTERVAL=${SCAN_INTERVAL}
+      # Use the Bedrock Bearer Token instead of IAM keys
+      - AWS_BEARER_TOKEN_BEDROCK=${AWS_BEARER_TOKEN_BEDROCK}
+    volumes:
+      - /c/logs:/var/log:ro
+      - ./app_data:/app/data

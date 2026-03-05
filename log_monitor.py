@@ -17,15 +17,16 @@ STATE_FILE = os.getenv("STATE_FILE", "/app/data/log_state.json")
 SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", "5"))
 
 # --- PII REDACTION PATTERNS ---
+# Note: Case-insensitivity is handled in re.compile to avoid Python 3.11+ flag errors
 PII_PATTERNS = {
     "EMAIL": r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+",
     "IP": r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b",
     "CREDIT_CARD": r"\b(?:\d[ -]*?){13,16}\b",
     "SSN": r"\b(?!000|666|9\d{2})([0-8]\d{2})[- ]?\d{2}[- ]?\d{4}\b",
     "SIN": r"\b[1-9]\d{2}[- ]?\d{3}[- ]?\d{3}\b",
-    "AUTH": r"(?i)(password|passwd|secret|authorization|bearer|api_key|token)[:=]\s*[^\s]+"
+    "AUTH": r"(password|passwd|secret|authorization|bearer|api_key|token)[:=]\s*[^\s]+"
 }
-PII_RE = re.compile("|".join(PII_PATTERNS.values()))
+PII_RE = re.compile("|".join(PII_PATTERNS.values()), re.IGNORECASE)
 
 # --- ERROR TRIGGER PATTERNS ---
 ERROR_PATTERNS = [
@@ -130,6 +131,7 @@ def get_ai_analysis(error_line):
             messages=[{"role": "user", "content": [{"text": prompt}]}],
             inferenceConfig={"maxTokens": 250, "temperature": 0}
         )
+        # Handle Bedrock response format
         solution = response['output']['message']['content'][0]['text']
         error_cache[line_hash] = solution
         save_persistence()
@@ -154,7 +156,10 @@ def monitor_logs():
                     f.seek(last_pos)
                     for line in f:
                         raw_line = line.strip()
-                        if not raw_line or any(n.upper() in raw_line.upper() for n in IGNORE_KEYWORDS):
+                        if not raw_line: continue
+                        
+                        # Apply ignore list
+                        if any(n.upper() in raw_line.upper() for n in IGNORE_KEYWORDS):
                             continue
                         
                         if TRIGGER_RE.search(raw_line):
@@ -165,7 +170,7 @@ def monitor_logs():
                                 send_alert("🔴 ALERT: Log Error", f"Error: {safe_line}\n\nFix: {analysis}")
                     log_state["files"][inode] = f.tell()
                 save_persistence()
-            except Exception as e: print(f"⚠️ Error: {e}")
+            except Exception as e: print(f"⚠️ Error processing {filepath}: {e}")
         time.sleep(SCAN_INTERVAL)
 
 if __name__ == "__main__":
